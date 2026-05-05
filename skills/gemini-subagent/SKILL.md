@@ -1,6 +1,10 @@
 ---
 name: gemini-subagent
 description: Call Gemini CLI as a subagent for second opinions, code review, file analysis, or tasks that benefit from a different LLM perspective. Use when the main agent needs help with image analysis, long document summarization, regex generation, or wants a cross-model verification of its own output. Works from any AI IDE that can execute shell commands.
+subagent_required: true
+routing: SKILLS_ROUTER.md
+max_timeout: 120
+retry_policy: max_2_with_backoff
 compatibility: "Requires Gemini CLI installed (`npm i -g @google/gemini-cli`), authenticated (`gemini auth`), and workspace trusted. Works from Claude Code, Cursor, Windsurf, Antigravity, Codex, or any agent with shell access."
 license: MIT
 allowed-tools: Bash
@@ -10,6 +14,7 @@ metadata:
     - cross_model_verification
     - image_analysis
     - long_document_summary
+    - code_review
   token-cost: ~200
   openclaw:
     requires:
@@ -89,3 +94,18 @@ export GEMINI_CLI_TRUST_WORKSPACE=true
   "/home/user/projects": "TRUST_PARENT"
 }
 ```
+
+## Subagent Protocol (MANDATORY)
+
+### Rule: 100% Routing Compliance
+
+Every call to this skill MUST be routed through `SKILLS_ROUTER.md`.
+Direct invocation without routing is PROHIBITED.
+
+### Execution Contract
+
+1. Pre-flight → `which gemini` must succeed
+2. Timeout → Always set (default: 90s, max: 120s)
+3. Output → Always clean boilerplate before returning
+4. Attribution → Always credit "According to Gemini subagent: ..."
+5. Error → Follow ERROR RECOVERY in AGENTS.md

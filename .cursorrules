@@ -1,0 +1,17 @@
+# Agent Skills — IDE Rules
+
+## MANDATORY
+1. ALL subagent calls MUST route through SKILLS_ROUTER.md
+2. NEVER skip pre-flight check before Gemini CLI calls
+3. ALWAYS use timeout for subagent calls (max 120s)
+4. ALWAYS clean output boilerplate before presenting
+5. ALWAYS credit source: "According to Gemini subagent: ..."
+
+## ROUTING
+Read SKILLS_ROUTER.md at conversation start.
+Match tasks against trigger conditions. Load skills ONLY when triggered.
+
+## ERROR HANDLING
+- command not found → install instructions
+- 429 rate limit → wait 30-60s, max 2 retries
+- timeout → simplify prompt

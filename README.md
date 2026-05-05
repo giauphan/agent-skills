@@ -9,6 +9,31 @@
 |---|---|---|
 | [`gemini-subagent`](skills/gemini-subagent/SKILL.md) | Call Gemini CLI as a subagent for second opinions, code review, image analysis | "ask gemini", need second opinion |
 
+## 🏗️ Architecture
+
+```
+agent-skills/
+├── AGENTS.md              # Entry point (auto-detected by 30+ AI tools)
+├── SKILLS_ROUTER.md       # Dynamic routing index (load-on-demand)
+├── skills/
+│   └── gemini-subagent/
+│       └── SKILL.md       # Skill definition + protocol
+├── scripts/
+│   └── mcp_gemini_subagent.py  # MCP server for native tool calls
+├── rules/
+│   └── self-check.md      # Pre-execution validation
+├── .cursorrules            # Cursor IDE rules
+├── .windsurfrules          # Windsurf IDE rules
+└── .clinerules             # Cline IDE rules
+```
+
+### Routing Flow
+1. Agent starts → reads `AGENTS.md` (auto-detected)
+2. `AGENTS.md` → points to `SKILLS_ROUTER.md`
+3. Router matches task → loads specific `SKILL.md`
+4. Skill executes with pre-flight + timeout + cleanup
+5. 100% subagent calls go through this pipeline
+
 ## 🔌 MCP Server
 
 For Claude Code / MCP-compatible IDEs, use the MCP server for native function calling:
