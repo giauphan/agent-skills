@@ -1,11 +1,11 @@
 ---
 name: gemini-subagent
-description: Call Gemini CLI as a subagent for second opinions, code review, file analysis, or tasks that benefit from a different LLM perspective. Use when the main agent needs help with image analysis, long document summarization, regex generation, or wants a cross-model verification of its own output. Works from any AI IDE that can execute shell commands.
+description: Call Gemini CLI as a subagent for second opinions, code review, file analysis, git diff review, session resuming, structured JSON output, or agent-delegation. Use when the main agent needs help with image analysis, long document summarization, batch refactoring, or cross-model verification. Works from any AI IDE that can execute shell commands.
 subagent_required: true
 routing: SKILLS_ROUTER.md
 max_timeout: 120
 retry_policy: max_2_with_backoff
-compatibility: "Requires Gemini CLI installed (`npm i -g @google/gemini-cli`), authenticated (`gemini auth`), and workspace trusted. Works from Claude Code, Cursor, Windsurf, Antigravity, Codex, or any agent with shell access."
+compatibility: "Requires Gemini CLI v0.40.0+ (`npm i -g @google/gemini-cli`), authenticated (`gemini auth`), workspace trusted."
 license: MIT
 allowed-tools: Bash
 metadata:
@@ -15,6 +15,10 @@ metadata:
     - image_analysis
     - long_document_summary
     - code_review
+    - git_diff_review
+    - batch_refactoring
+    - session_resume
+    - structured_output
   token-cost: ~200
   openclaw:
     requires:
@@ -23,84 +27,159 @@ metadata:
     homepage: https://github.com/giauphan/agent-skills
 ---
 
-# Gemini Subagent — Call Gemini CLI from Any AI IDE
+# Gemini Subagent — Full Feature Guide (v0.40.0 tested)
 
 ## When to Use
 
-- You need a **second opinion** on code logic or architecture
-- You need **image/screenshot analysis** (Gemini has vision)
-- You need to **summarize a very long document** without consuming your own context
-- You want **cross-model verification** of your output
-- The user explicitly asks to "ask Gemini" or "check with Gemini"
+| Scenario | Pattern to Use |
+|---|---|
+| Second opinion on code/architecture | [Simple Prompt](#1-simple-prompt) |
+| Code review with focus areas | [Code Review](#2-code-review) |
+| Batch refactoring / complex multi-step | [@generalist Agent](#3-generalist-agent) |
+| Git diff review before commit | [Stdin Pipe](#4-stdin-pipe--git-diff) |
+| Structured output with token stats | [Stream JSON](#5-stream-json-output) |
+| Continue task from previous session | [Resume Session](#6-resume-session) |
+| List available sessions | [List Sessions](#7-list-sessions) |
+| Fast model for simple task | [Model Selection](#8-model-selection) |
+
+---
 
 ## Step 1: Pre-Flight Check
 
 ```bash
 which gemini && echo "✅ Gemini CLI found" || echo "❌ Not installed: npm i -g @google/gemini-cli"
+gemini --version  # Should be 0.40.0+
 ```
 
-## Step 2: Call Gemini CLI
+---
 
-### Simple prompt
+## Feature Catalog (All Verified Working)
+
+### 1. Simple Prompt
 ```bash
-gemini --yolo -p "Your prompt here" 2>&1 | tail -20
+timeout 90 gemini --yolo -p "Your prompt here" 2>&1 | \
+  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -20
 ```
 
-### With file reading (project-aware)
+### 2. Code Review
 ```bash
-cd /path/to/project && gemini --yolo -p "Read file.py and suggest improvements" 2>&1 | tail -30
+# Review a specific file
+timeout 90 gemini --yolo -p "Read the file 'src/auth.py' and review it. Focus on: security. List issues with line numbers." 2>&1 | \
+  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -30
 ```
 
-### With timeout (safety)
+### 3. @generalist Agent
+Use for batch refactoring, multi-file edits, turn-intensive tasks.
+The generalist agent has access to ALL tools and keeps main session lean.
+
 ```bash
-timeout 90 gemini --yolo -p "Your prompt" 2>&1 | tail -20
+timeout 120 gemini --yolo -p "@generalist Fix all TypeScript errors in src/ directory" 2>&1 | \
+  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -30
 ```
 
-## Step 3: Filter Boilerplate
+### 4. Stdin Pipe / Git Diff
+Pipe ANY content directly into Gemini — git diffs, logs, JSON, code snippets.
 
 ```bash
-timeout 90 gemini --yolo -p "prompt" 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | \
-  tail -20
+# Git diff review before commit
+git diff HEAD | timeout 90 gemini --yolo -p "Review these changes for bugs and issues" 2>&1 | \
+  grep -v "YOLO mode\|Ripgrep\|Falling" | tail -20
+
+# Pipe a file
+cat src/auth.py | timeout 90 gemini --yolo -p "Find security vulnerabilities in this code" 2>&1 | tail -20
+
+# Pipe logs
+cat error.log | timeout 90 gemini --yolo -p "Analyze these errors and suggest fixes" 2>&1 | tail -20
 ```
 
-## Step 4: Handle Errors
+### 5. Stream JSON Output
+Returns structured JSON with token stats, session ID, model info. Best for machine-readable output or when you need metadata.
+
+```bash
+timeout 90 gemini --yolo --output-format stream-json -p "Your prompt" 2>&1 | \
+  grep -E '"type":"(message|result)"' | \
+  python3 -c "import sys,json; [print(json.loads(l).get('content','') or json.dumps(json.loads(l).get('stats',{}))) for l in sys.stdin if l.strip()]"
+```
+
+Raw stream-json format:
+```json
+{"type":"init","session_id":"...","model":"auto-gemini-3"}
+{"type":"message","role":"assistant","content":"Hello!","delta":true}
+{"type":"result","status":"success","stats":{"total_tokens":10988,"input_tokens":10671,"output_tokens":42,"duration_ms":5820}}
+```
+
+### 6. Resume Session
+Gemini CLI saves sessions per-directory. Resume any previous session by index or "latest".
+
+```bash
+# Resume most recent session
+timeout 90 gemini --yolo --resume latest -p "Continue the refactoring from where we left off" 2>&1 | \
+  grep -v "YOLO mode\|Ripgrep\|Falling" | tail -20
+
+# Resume by session index (see list-sessions)
+timeout 90 gemini --yolo --resume 2 -p "What was the plan you outlined?" 2>&1 | tail -10
+```
+
+### 7. List Sessions
+```bash
+gemini --yolo --list-sessions 2>&1 | grep -v "YOLO mode"
+# Output: Available sessions (4):
+#   1. Task name (time ago) [session-uuid]
+#   2. ...
+```
+
+### 8. Model Selection
+Default is `auto-gemini-3`. Use specific models for speed/quality tradeoff.
+
+```bash
+# Best quality — Gemini Pro plan (gemini-2.5-pro) ✅ CONFIRMED
+timeout 90 gemini --yolo -m gemini-2.5-pro -p "Complex reasoning or deep analysis" 2>&1 | tail -20
+
+# Fast + good quality ✅ CONFIRMED
+timeout 60 gemini --yolo -m gemini-3-flash-preview -p "Regular tasks" 2>&1 | tail -10
+
+# Fastest / cheapest ✅ CONFIRMED (auto-routing uses this internally)
+timeout 30 gemini --yolo -m gemini-2.5-flash-lite -p "Simple quick task" 2>&1 | tail -5
+
+# Default (auto-selects best model per task)
+timeout 90 gemini --yolo -p "Any task" 2>&1 | tail -20
+```
+
+> **Note:** Model names `gemini-3-pro` and `gemini-2.0-flash` return 404. Use the names above.
+
+---
+
+## Error Handling
 
 | Error | Cause | Fix |
 |---|---|---|
 | `not running in a trusted directory` | Workspace not trusted | `export GEMINI_CLI_TRUST_WORKSPACE=true` |
 | `429 / RESOURCE_EXHAUSTED` | Rate limited | Wait 30-60 seconds, retry |
 | `command not found` | CLI not installed | `npm i -g @google/gemini-cli && gemini auth` |
-| Timeout | Prompt too complex | Simplify prompt or increase timeout |
+| `Timeout (exit 143)` | Prompt too complex or interactive-only mode | Simplify prompt or use `--yolo` |
+| `404 error` | Wrong model name | Use `gemini-2.5-pro` or `gemini-3-flash-preview` (not `gemini-3-pro` or `gemini-2.0-flash`) |
+| `exit 130` | Feature requires interactive mode | Use headless-compatible alternatives |
 
-## Step 5: Integration Pattern
+## ❌ Features That Require Interactive Mode (Do NOT use headless)
 
-```
-1. Formulate a SPECIFIC, CONCISE prompt for Gemini
-2. Run: timeout 90 gemini --yolo -p "<prompt>" 2>&1 | tail -20
-3. Read stdout output
-4. Integrate Gemini's answer into your own response
-5. Credit: "According to Gemini subagent: ..."
-```
+- `--approval-mode plan` — only works interactively
+- `@codebase_investigator` — requires interactive session
+- `--acp` mode — requires interactive
+
+---
 
 ## Environment Setup
 
 ```bash
-# ~/.bashrc — permanent trust
+# ~/.bashrc — permanent workspace trust
 export GEMINI_CLI_TRUST_WORKSPACE=true
-
-# ~/.gemini/trustedFolders.json — per-folder trust
-{
-  "/home/user/projects": "TRUST_PARENT"
-}
 ```
 
 ## Subagent Protocol (MANDATORY)
 
 ### Rule: 100% Routing Compliance
 
-Every call to this skill MUST be routed through `SKILLS_ROUTER.md`.
-Direct invocation without routing is PROHIBITED.
+Every call MUST be routed through `SKILLS_ROUTER.md`. Direct invocation without routing is PROHIBITED.
 
 ### Execution Contract
 
