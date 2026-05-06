@@ -21,7 +21,7 @@ weight: minimal
 | 7 | Git diff review before commit | `skills/gemini-subagent/SKILL.md` → use stdin pipe | ~300 |
 | 8 | Continue task from previous session | `skills/gemini-subagent/SKILL.md` → use `--resume` | ~300 |
 | 9 | Need structured output with token stats | `skills/gemini-subagent/SKILL.md` → use stream-json | ~300 |
-| 10 | Complex reasoning / need best model | `skills/gemini-subagent/SKILL.md` → use `gemini-2.5-pro` | ~300 |
+| 10 | Complex reasoning / need best model | `skills/gemini-subagent/SKILL.md` → use `gemini-3.1-pro-preview` | ~300 |
 | 11 | Before writing ANY code (self-check) | `rules/self-check.md` | ~150 |
 
 ## How to Use
@@ -43,7 +43,7 @@ ALL skill calls MUST follow this sequence:
 
 | Model | Flag | Use Case |
 |---|---|---|
-| `gemini-2.5-pro` | `-m gemini-2.5-pro` | Complex reasoning, best quality (Pro plan) |
+| `gemini-3.1-pro-preview` | `-m gemini-3.1-pro-preview` | Complex reasoning, best quality (Pro plan) |
 | `gemini-3-flash-preview` | `-m gemini-3-flash-preview` | Fast, good quality |
 | `gemini-2.5-flash-lite` | `-m gemini-2.5-flash-lite` | Fastest, cheapest |
 | auto | (no flag) | CLI auto-selects best model |
@@ -58,13 +58,13 @@ ALL skill calls MUST follow this sequence:
 | Stream JSON + token stats | `gemini --yolo --output-format stream-json -p "..."` |
 | Resume session | `gemini --yolo --resume latest -p "..."` |
 | List sessions | `gemini --yolo --list-sessions` |
-| Model selection | `gemini --yolo -m gemini-2.5-pro -p "..."` |
+| Model selection | `gemini --yolo -m gemini-3.1-pro-preview -p "..."` |
 
 ## ❌ Interactive-Only (NOT usable from subagent)
 
 - `--approval-mode plan` — requires interactive TTY
 - `@codebase_investigator` — requires interactive session
-- `gemini-3-pro` — wrong name (use `gemini-2.5-pro`)
+- `gemini-3.1-pro` — wrong name (use `gemini-3.1-pro-preview`)
 - `gemini-2.0-flash` — wrong name (use `gemini-3-flash-preview`)
 
 ## Token Budget

@@ -290,9 +290,7 @@ TOOLS = [
             "properties": {
                 "prompt": {"type": "string", "description": "The prompt/question to send to Gemini"},
                 "timeout": {"type": "integer", "description": "Max seconds to wait (default: 90)", "default": 90},
-                "project_dir": {"type": "string", "description": "Project directory for file-aware prompts (optional)"},
-                "model": {"type": "string", "description": "Model name. Confirmed: 'gemini-2.5-pro' (Pro plan, best quality), 'gemini-3-flash-preview' (fast), 'gemini-2.5-flash-lite' (fastest). Leave empty for auto."},
-            },
+                "model": {"type": "string", "description": "Model name. Confirmed: 'gemini-3.1-pro-preview' (Pro plan, best quality), 'gemini-3-flash-preview' (fast), 'gemini-2.5-flash-lite' (fastest). Leave empty for auto."},
             "required": ["prompt"],
         },
     },

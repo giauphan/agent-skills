@@ -132,8 +132,8 @@ gemini --yolo --list-sessions 2>&1 | grep -v "YOLO mode"
 Default is `auto-gemini-3`. Use specific models for speed/quality tradeoff.
 
 ```bash
-# Best quality — Gemini Pro plan (gemini-2.5-pro) ✅ CONFIRMED
-timeout 90 gemini --yolo -m gemini-2.5-pro -p "Complex reasoning or deep analysis" 2>&1 | tail -20
+# Best quality — Gemini 3.1 Pro (gemini-3.1-pro-preview) ✅ CONFIRMED
+timeout 90 gemini --yolo -m gemini-3.1-pro-preview -p "Complex reasoning or deep analysis" 2>&1 | tail -20
 
 # Fast + good quality ✅ CONFIRMED
 timeout 60 gemini --yolo -m gemini-3-flash-preview -p "Regular tasks" 2>&1 | tail -10
@@ -145,7 +145,7 @@ timeout 30 gemini --yolo -m gemini-2.5-flash-lite -p "Simple quick task" 2>&1 | 
 timeout 90 gemini --yolo -p "Any task" 2>&1 | tail -20
 ```
 
-> **Note:** Model names `gemini-3-pro` and `gemini-2.0-flash` return 404. Use the names above.
+> **Note:** Model names `gemini-3.1-pro` and `gemini-2.0-flash` return 404. Use the preview names above.
 
 ---
 
@@ -157,7 +157,7 @@ timeout 90 gemini --yolo -p "Any task" 2>&1 | tail -20
 | `429 / RESOURCE_EXHAUSTED` | Rate limited | Wait 30-60 seconds, retry |
 | `command not found` | CLI not installed | `npm i -g @google/gemini-cli && gemini auth` |
 | `Timeout (exit 143)` | Prompt too complex or interactive-only mode | Simplify prompt or use `--yolo` |
-| `404 error` | Wrong model name | Use `gemini-2.5-pro` or `gemini-3-flash-preview` (not `gemini-3-pro` or `gemini-2.0-flash`) |
+| `404 error` | Wrong model name | Use `gemini-3.1-pro-preview` or `gemini-3-flash-preview` (not `gemini-3.1-pro` or `gemini-2.0-flash`) |
 | `exit 130` | Feature requires interactive mode | Use headless-compatible alternatives |
 
 ## ❌ Features That Require Interactive Mode (Do NOT use headless)
