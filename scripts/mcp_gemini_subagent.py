@@ -35,6 +35,7 @@ import json
 import sys
 import os
 import re
+import time
 from typing import Optional
 
 
@@ -133,81 +134,96 @@ def call_gemini(
     env = os.environ.copy()
     env["GEMINI_CLI_TRUST_WORKSPACE"] = "true"
 
-    cmd = ["gemini", "--yolo"]
+    current_model = model
+    max_retries = 1
 
-    if model:
-        cmd += ["-m", model]
+    for attempt in range(max_retries + 1):
+        cmd = ["gemini", "--yolo"]
+        
+        if current_model:
+            cmd += ["-m", current_model]
+            
+        if output_format != "text":
+            cmd += ["--output-format", output_format]
+            
+        cmd += ["-p", prompt]
+        
+        if extra_args:
+            cmd += extra_args
 
-    if output_format != "text":
-        cmd += ["--output-format", output_format]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=cwd or os.getcwd(),
+                env=env,
+                input=stdin_content,
+            )
 
-    cmd += ["-p", prompt]
+            raw = result.stdout + result.stderr
 
-    if extra_args:
-        cmd += extra_args
+            # Fatal error (no retry)
+            if "not running in a trusted directory" in raw:
+                return {
+                    "success": False,
+                    "output": "",
+                    "error": "Workspace not trusted. Run: export GEMINI_CLI_TRUST_WORKSPACE=true",
+                    "raw_output": raw[:500],
+                    "stats": None,
+                }
 
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=cwd or os.getcwd(),
-            env=env,
-            input=stdin_content,
-        )
+            # If CLI failed, retry with fallback model
+            if result.returncode != 0:
+                if attempt < max_retries:
+                    time.sleep(1)
+                    current_model = "gemini-3-flash-preview"
+                    continue
+                return {
+                    "success": False,
+                    "output": "",
+                    "error": f"Failed after retry. Last error: {raw[:200]}",
+                    "raw_output": raw[:500],
+                    "stats": None,
+                }
 
-        raw = result.stdout + result.stderr
+            if output_format == "stream-json":
+                parsed = _parse_stream_json(raw)
+                if not parsed["success"] and attempt < max_retries:
+                    time.sleep(1)
+                    current_model = "gemini-3-flash-preview"
+                    continue
+                return parsed
 
-        # Check for rate limit
-        if "429" in raw and "RESOURCE_EXHAUSTED" in raw:
+            cleaned = clean_gemini_output(raw)
             return {
-                "success": False,
-                "output": "",
-                "error": "Rate limited (429). Wait 30-60 seconds and retry.",
-                "raw_output": raw[:500],
+                "success": True,
+                "output": cleaned,
+                "error": None,
+                "raw_output": raw[:500] if len(raw) > 500 else raw,
                 "stats": None,
             }
 
-        # Check for trust error
-        if "not running in a trusted directory" in raw:
+        except subprocess.TimeoutExpired:
+            if attempt < max_retries:
+                current_model = "gemini-3-flash-preview"
+                continue
             return {
                 "success": False,
                 "output": "",
-                "error": "Workspace not trusted. Run: export GEMINI_CLI_TRUST_WORKSPACE=true",
-                "raw_output": raw[:500],
+                "error": f"Timeout after {timeout}s on both models.",
+                "raw_output": "",
                 "stats": None,
             }
-
-        # Parse stream-json format
-        if output_format == "stream-json":
-            return _parse_stream_json(raw)
-
-        cleaned = clean_gemini_output(raw)
-        return {
-            "success": True,
-            "output": cleaned,
-            "error": None,
-            "raw_output": raw[:500] if len(raw) > 500 else raw,
-            "stats": None,
-        }
-
-    except subprocess.TimeoutExpired:
-        return {
-            "success": False,
-            "output": "",
-            "error": f"Timeout after {timeout}s. Simplify prompt or increase timeout.",
-            "raw_output": "",
-            "stats": None,
-        }
-    except FileNotFoundError:
-        return {
-            "success": False,
-            "output": "",
-            "error": "Gemini CLI not found. Install: npm i -g @google/gemini-cli",
-            "raw_output": "",
-            "stats": None,
-        }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "output": "",
+                "error": "Gemini CLI not found. Install: npm i -g @google/gemini-cli",
+                "raw_output": "",
+                "stats": None,
+            }
 
 
 def _parse_stream_json(raw: str) -> dict:
