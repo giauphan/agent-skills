@@ -58,14 +58,14 @@ gemini --version  # Should be 0.40.0+
 ### 1. Simple Prompt
 ```bash
 timeout 90 gemini --yolo -p "Your prompt here" 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -20
+  grep -v "YOLO\|Ripgrep\|Falling\|_Gaxios\|at Gaxios\|at async\|at process\|status: 429\|error: undefined\|Symbol(" | tail -20
 ```
 
 ### 2. Code Review
 ```bash
 # Review a specific file
 timeout 90 gemini --yolo -p "Read the file 'src/auth.py' and review it. Focus on: security. List issues with line numbers." 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -30
+  grep -v "YOLO\|Ripgrep\|Falling\|_Gaxios\|at Gaxios\|at async\|at process\|status: 429\|error: undefined\|Symbol(" | tail -30
 ```
 
 ### 3. @generalist Agent
@@ -74,7 +74,7 @@ The generalist agent has access to ALL tools and keeps main session lean.
 
 ```bash
 timeout 120 gemini --yolo -p "@generalist Fix all TypeScript errors in src/ directory" 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling back\|_GaxiosError\|at Gaxios\|at async\|at process" | tail -30
+  grep -v "YOLO\|Ripgrep\|Falling\|_Gaxios\|at Gaxios\|at async\|at process\|status: 429\|error: undefined\|Symbol(" | tail -30
 ```
 
 ### 4. Stdin Pipe / Git Diff
@@ -83,7 +83,7 @@ Pipe ANY content directly into Gemini — git diffs, logs, JSON, code snippets.
 ```bash
 # Git diff review before commit
 git diff HEAD | timeout 90 gemini --yolo -p "Review these changes for bugs and issues" 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling" | tail -20
+  grep -v "YOLO\|Ripgrep\|Falling\|_Gaxios\|at Gaxios\|at async\|at process\|status: 429\|error: undefined\|Symbol(" | tail -20
 
 # Pipe a file
 cat src/auth.py | timeout 90 gemini --yolo -p "Find security vulnerabilities in this code" 2>&1 | tail -20
@@ -114,7 +114,7 @@ Gemini CLI saves sessions per-directory. Resume any previous session by index or
 ```bash
 # Resume most recent session
 timeout 90 gemini --yolo --resume latest -p "Continue the refactoring from where we left off" 2>&1 | \
-  grep -v "YOLO mode\|Ripgrep\|Falling" | tail -20
+  grep -v "YOLO\|Ripgrep\|Falling\|_Gaxios\|at Gaxios\|at async\|at process\|status: 429\|error: undefined\|Symbol(" | tail -20
 
 # Resume by session index (see list-sessions)
 timeout 90 gemini --yolo --resume 2 -p "What was the plan you outlined?" 2>&1 | tail -10
