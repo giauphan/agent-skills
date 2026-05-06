@@ -17,12 +17,13 @@ weight: minimal
 | 3 | Image/screenshot analysis needed | `skills/gemini-subagent/SKILL.md` | ~300 |
 | 4 | Long document summarization | `skills/gemini-subagent/SKILL.md` | ~300 |
 | 5 | Cross-model output verification | `skills/gemini-subagent/SKILL.md` | ~300 |
-| 6 | Batch refactoring / multi-file edits | `skills/gemini-subagent/SKILL.md` → use `@generalist` | ~300 |
+| 6 | Batch refactoring / multi-file edits | `skills/gemini-subagent/SKILL.md` → **`@generalist` (1st priority)** | ~300 |
 | 7 | Git diff review before commit | `skills/gemini-subagent/SKILL.md` → use stdin pipe | ~300 |
 | 8 | Continue task from previous session | `skills/gemini-subagent/SKILL.md` → use `--resume` | ~300 |
 | 9 | Need structured output with token stats | `skills/gemini-subagent/SKILL.md` → use stream-json | ~300 |
 | 10 | Complex reasoning / need best model | `skills/gemini-subagent/SKILL.md` → use `gemini-3.1-pro-preview` | ~300 |
-| 11 | Before writing ANY code (self-check) | `rules/self-check.md` | ~150 |
+| 11 | **ANY task that touches files** | `skills/gemini-subagent/SKILL.md` → **use `@generalist` first** | ~300 |
+| 12 | Before writing ANY code (self-check) | `rules/self-check.md` | ~150 |
 
 ## How to Use
 
@@ -63,9 +64,18 @@ ALL skill calls MUST follow this sequence:
 ## ❌ Interactive-Only (NOT usable from subagent)
 
 - `--approval-mode plan` — requires interactive TTY
-- `@codebase_investigator` — requires interactive session
+- `@codebase_investigator` — AbortError in headless (interactive-only)
+- `@cli_help` — Timeout in headless (interactive-only)
 - `gemini-3.1-pro` — wrong name (use `gemini-3.1-pro-preview`)
 - `gemini-2.0-flash` — wrong name (use `gemini-3-flash-preview`)
+
+## Agent Priority Rule
+
+```
+1. @generalist (ask_gemini_agent) — ANY task with file operations
+2. stdin pipe (ask_gemini_pipe)   — if content already available
+3. simple prompt (ask_gemini)     — Q&A only, no file changes
+```
 
 ## Token Budget
 

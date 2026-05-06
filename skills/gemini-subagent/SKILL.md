@@ -29,13 +29,32 @@ metadata:
 
 # Gemini Subagent — Full Feature Guide (v0.40.0 tested)
 
-## When to Use
+## Tool Priority (Use This Order)
 
+> **ALWAYS prefer `@generalist` for any task involving files or multi-step work.**
+> Only fall back to simple prompt for pure Q&A or analysis with no file changes.
+
+| Priority | Use Case | Tool |
+|---|---|---|
+| 🥇 1st | Multi-file edits, batch tasks, anything touching files | `@generalist` (ask_gemini_agent) |
+| 🥈 2nd | Content already available (git diff, logs) | stdin pipe (ask_gemini_pipe) |
+| 🥉 3rd | Pure Q&A, architecture opinions, code review read-only | simple prompt (ask_gemini) |
+
+## Available Agents
+
+| Agent | Headless | Use For |
+|---|---|---|
+| `@generalist` | ✅ **Works** | Batch refactoring, multi-file tasks, full tooling |
+| `@codebase_investigator` | ❌ Interactive-only | AbortError in headless — skip |
+| `@cli_help` | ❌ Interactive-only | Timeout in headless — skip |
+
+## When to Use (by scenario)
 | Scenario | Pattern to Use |
 |---|---|
 | Second opinion on code/architecture | [Simple Prompt](#1-simple-prompt) |
 | Code review with focus areas | [Code Review](#2-code-review) |
-| Batch refactoring / complex multi-step | [@generalist Agent](#3-generalist-agent) |
+| **ANY task touching files** | [**@generalist Agent ← PREFER THIS**](#3-generalist-agent) |
+| Batch refactoring / complex multi-step | [**@generalist Agent ← PREFER THIS**](#3-generalist-agent) |
 | Git diff review before commit | [Stdin Pipe](#4-stdin-pipe--git-diff) |
 | Structured output with token stats | [Stream JSON](#5-stream-json-output) |
 | Continue task from previous session | [Resume Session](#6-resume-session) |
